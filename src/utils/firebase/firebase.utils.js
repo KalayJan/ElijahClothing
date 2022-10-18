@@ -6,9 +6,21 @@ import { getAuth,
      createUserWithEmailAndPassword,
      signInWithEmailAndPassword,
      signOut,
-     onAuthStateChanged 
+     onAuthStateChanged,
+      
     } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { 
+    getFirestore, 
+    doc, 
+    getDoc, 
+    setDoc, 
+    collection, 
+    writeBatch,
+    query,
+    getDocs,
+    DocumentSnapshot
+ } from 'firebase/firestore';
+import { applyMiddleware } from 'redux';
 
 const firebaseConfig = {
     apiKey: "AIzaSyDNR7RsL8OYqYgNTL2db0QXUHa_dyUvDu0",
@@ -28,8 +40,43 @@ provider.setCustomParameters({
 });
 
 export const auth = getAuth(firebaseApp);
+
 export const signInWithGooglePopUp = () => signInWithPopup(auth, provider);
-export const dataBase = getFirestore();
+
+export const db = getFirestore();
+
+export const addCollectionAndDocuments = async (
+    collectionKey, 
+    objectsToAdd,
+    field
+    ) => {
+    const collectionRef = collection(db, collectionKey);
+    const batch = writeBatch(db);
+
+    objectsToAdd.forEach((object) => {
+        const docRef = doc(collectionRef, object.title.toLowerCase() )
+        batch.set(docRef, object)
+    });
+
+    await batch.commit();
+    console.log('done');
+};
+
+
+export const getCategoriesAndDocuments = async() => {
+    const collectionRef = collection(db, 'categories');
+    const q = query(collectionRef);
+
+    const querySnapshot = await getDocs(q);
+    const categoryMap = querySnapshot.docs.reduce((acc, docSnapshot) => {
+        const { title, items } = docSnapshot.data();
+        acc[title.toLowerCase()] = items;
+        return acc;
+    }, {});
+
+    return categoryMap;
+}
+    
 
 export const createUserDocumentFromAuth = async (
     userAuth,
@@ -37,7 +84,7 @@ export const createUserDocumentFromAuth = async (
     ) => {
     if (!userAuth) return;
 
-    const userDocRef = doc(dataBase, 'users', userAuth.uid);
+    const userDocRef = doc(db, 'users', userAuth.uid);
 
     console.log(userDocRef);
 
